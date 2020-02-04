@@ -33,6 +33,9 @@ class Environment:
     def copy(self):
         return Environment(self.variables.copy())
 
+    def get(self, key, default=None):
+        return self.variables.get(key, default)
+
     @property
     def command_map(self):
         return self["COMMAND_MAP"]
