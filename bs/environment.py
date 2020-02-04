@@ -1,10 +1,45 @@
 from copy import deepcopy
 
 from bs.subst import subst
+from bs.defaults import DEFAULT_COMMAND_MAP
 
 
-class Environment(dict):
+class Environment:
     """A dict-like object that represents a build environment."""
+
+    def __init__(self, *args, **kwargs):
+        if len(args) == 1 and isinstance(args[0], dict):
+            self.variables = args
+        else:
+            self.variables = kwargs
+
+        if self.get("COMMAND_MAP") is None:
+            self["COMMAND_MAP"] = DEFAULT_COMMAND_MAP
+
+    def __setitem__(self, key, item):
+        self.variables[key] = item
+
+    def __getitem__(self, key):
+        return self.variables[key]
+
+    def __repr__(self):
+        return repr(self.variables)
+
+    def __len__(self):
+        return len(self.variables)
+
+    def __delitem__(self, key):
+        del self.variables[key]
+
+    def clear(self):
+        return self.variables.clear()
+
+    def copy(self):
+        return Environment(self.variables.copy())
+
+    @property
+    def command_map(self):
+        return self["COMMAND_MAP"]
 
     def clone(self):
         return deepcopy(self)
