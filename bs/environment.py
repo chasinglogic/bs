@@ -8,11 +8,7 @@ class Environment:
     """A dict-like object that represents a build environment."""
 
     def __init__(self, *args, **kwargs):
-        if len(args) == 1 and isinstance(args[0], dict):
-            self.variables = args
-        else:
-            self.variables = kwargs
-
+        self.variables = dict(*args, **kwargs)
         if self.get("COMMAND_MAP") is None:
             self["COMMAND_MAP"] = DEFAULT_COMMAND_MAP
 
