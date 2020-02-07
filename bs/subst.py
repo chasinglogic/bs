@@ -2,11 +2,21 @@ import enum
 from typing import Union
 
 
+class InvalidCallableValue(Exception):
+    pass
+
+
 class Result:
     def __init__(self, pre_subst, post_subst, variables):
         self.pre_subst = pre_subst
         self.post_subst = post_subst
         self.variables = variables
+
+    def __repr__(self):
+        return "Result('{}', '{}')".format(self.pre_subst, self.post_subst)
+
+    def __str__(self):
+        return str(self.post_subst)
 
     def needs_rebuild(self, variables):
         return not self.variables == variables
@@ -100,23 +110,31 @@ def needs_further_subst(value):
     return False
 
 
-def subst(env, s, for_command=False, recursive=False, targets=None, sources=None):
-    if targets is not None or sources is not None:
-        # Do a shallow copy for performance, we're only going to modify two top
-        # level keys so we do not need to do a deep copy.
-        env = env.copy()
-        env["targets"] = targets
-        env["sources"] = sources
+def to_expansion_list(bs, expanded, variables, targets, sources):
+    expansion_list = []
+    for item in expanded:
+        if needs_further_subst(item):
+            sub_results, sub_variables = subst(bs, item, recursive=True)
+            variables.update(sub_variables)
+            expansion_list.extend(reversed(sub_results))
+        else:
+            expansion_list.append(str(item))
 
-        # Provide a convenient way to access target[0] for builders which only
-        # support one output.
-        if targets is not None:
-            env["target"] = targets[0]
+    return expansion_list
+
+
+def subst(bs, s, for_command=False, recursive=False, targets=None, sources=None):
+    if not recursive and bs.is_mutable():
+        bs["targets"] = targets
+        if targets:
+            bs["target"] = targets[0]
+        bs["sources"] = sources
 
     if isinstance(s, Result):
-        variables = {key: env.get(key) for key in s.vars()}
+        variables = {key: bs.get(key) for key in s.vars()}
 
         if not s.needs_rebuild(variables):
+            print("CACHED!")
             return s.post_subst
 
         s = s.pre_subst
@@ -127,37 +145,63 @@ def subst(env, s, for_command=False, recursive=False, targets=None, sources=None
 
     for token, value in lexer:
         if token == Token.literal:
+            print("LITERAL", token, value)
             result.append(value)
             continue
 
-        expanded = env.get(value)
-        if not expanded:
+        expanded = bs.get(value, None)
+        if expanded is None:
             continue
 
         if needs_further_subst(expanded):
-            sub_results, sub_variables = subst(env, expanded, recursive=True)
+            sub_results, sub_variables = subst(bs, expanded, recursive=True)
             variables.update(sub_variables)
+            print("EXPANDED", expanded, "TO", sub_results)
             result.extend(sub_results)
         elif isinstance(expanded, list):
-            expansion_list = []
-            for item in expanded:
-                if needs_further_subst(item):
-                    sub_results, sub_variables = subst(env, item, recursive=True)
-                    variables.update(sub_variables)
-                    expansion_list.extend(reversed(sub_results))
-                else:
-                    expansion_list.append(item)
-
+            expansion_list = to_expansion_list(
+                bs, expanded, variables, targets, sources
+            )
             variables[value] = expansion_list
             result.extend(expansion_list)
+        elif callable(expanded):
+            called_value = expanded(bs.immutable())
+            if not called_value:
+                continue
+
+            if needs_further_subst(called_value):
+                sub_results, sub_variables = subst(bs, called_value, recursive=True)
+                variables.update(sub_variables)
+                result.extend(sub_results)
+            elif isinstance(called_value, str):
+                result.append(str(called_value))
+            elif isinstance(called_value, list):
+                expansion_list = to_expansion_list(
+                    bs, called_value, variables, targets, sources
+                )
+                variables[value] = expansion_list
+                result.extend(expansion_list)
+            else:
+                raise InvalidCallableValue(
+                    "Expansion function {} returned an invalid value: {}".format(
+                        str(expanded), str(called_value)
+                    )
+                )
+
         else:
             variables[value] = expanded
-            result.append(expanded)
+            result.append(str(expanded))
 
-    env[s] = Result(pre_subst=s, post_subst=result, variables=variables)
+    if s not in ["targets", "target", "sources"] and bs.is_mutable():
+        bs[s] = Result(pre_subst=s, post_subst=result, variables=variables)
 
     if recursive:
         return result, variables
+
+    if bs.is_mutable():
+        bs.delete("targets")
+        bs.delete("target")
+        bs.delete("sources")
 
     if not for_command:
         return " ".join(result)
