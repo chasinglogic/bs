@@ -1,7 +1,8 @@
+from sys import platform
 from copy import deepcopy
 
 from bs.subst import subst
-from bs.defaults import DEFAULT_COMMAND_MAP, DEFAULT_BUILDERS
+from bs.load import load_builders
 
 
 class BS:
@@ -9,11 +10,8 @@ class BS:
 
     def __init__(self, *args, **kwargs):
         self.variables = dict(*args, **kwargs)
-        if self.get("COMMAND_MAP") is None:
-            self["COMMAND_MAP"] = DEFAULT_COMMAND_MAP
-
-        if self.get("BUILDERS") is None:
-            self["BUILDERS"] = DEFAULT_BUILDERS
+        self["platform"] = platform
+        self["BUILDERS"] = load_builders(self)
 
     def __setitem__(self, key, item):
         self.variables[key] = item
@@ -89,8 +87,8 @@ class BS:
 
             self[key] = result
 
-    def subst_command(self, s):
-        return subst(self, s, for_command=True)
+    def subst_command(self, s, targets=None, sources=None):
+        return subst(self, s, for_command=True, targets=targets, sources=sources)
 
     def subst(self, s):
         return subst(self, s, for_command=False)
