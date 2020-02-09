@@ -5,29 +5,15 @@ from bs.errors import UserError
 
 
 class Builder:
-    def __init__(self, env, targets, sources, **overrides):
-        self.env = env
+    def __init__(self, bs, targets, sources, **overrides):
+        self.bs = bs
         self.targets = targets
         self.sources = sources
         self.overrides = overrides
 
+    def __call__(self, bs, targets, sources, **overrides):
+        self.__init__(bs, targets, sources, **overrides)
+        return self
+
     def get_command(self):
         raise NotImplementedError
-
-
-class Program(Builder):
-    """Builds programs based on the file extension of sources."""
-
-    def get_command(self):
-        if not self.sources:
-            return []
-
-        extension = get_file_extension(self.sources[0])
-        try:
-            return self.env.command_map[extension]
-        except KeyError:
-            raise UserError(
-                "Unknown file extension for Program builder: {} for target {}".format(
-                    extension, self.targets
-                )
-            )
