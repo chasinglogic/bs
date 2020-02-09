@@ -1,5 +1,5 @@
 from os.path import splitext
 
 
-def get_file_extension(filename):
+def get_suffix(filename):
     return splitext(filename)[1]
