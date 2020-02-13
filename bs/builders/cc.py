@@ -5,15 +5,13 @@ from os import getenv
 from bs.builder import Builder
 from bs.errors import UserError
 from bs.log import warning
+from bs.builders.clike_builder import ClikeBuilder
 
 
-class CC(Builder):
+class CC(ClikeBuilder):
     """Implements a builder for C programs"""
 
-    def get_command(self):
-        return self.bs.subst_command(
-            "${CC_COMMAND}", targets=self.targets, sources=self.sources,
-        )
+    COMSTR = "${CC_COMMAND}"
 
 
 def platform_compiler():
