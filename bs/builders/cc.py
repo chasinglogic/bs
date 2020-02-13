@@ -59,7 +59,7 @@ def c_include_flags(bs):
 
 
 def setup(bs):
-    bs["CC"] = getenv("CC", None)
+    bs["CC"] = getenv("CC", bs.get("CC", None))
     if bs["CC"] is None:
         try:
             bs["CC"] = platform_compiler()
