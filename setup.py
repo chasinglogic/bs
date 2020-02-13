@@ -38,7 +38,7 @@ setup(
         "Programming Language :: Python :: 3.8",
     ],
     entry_points={
-        "console_scripts": ["bs = bs.cli.main",],
+        "console_scripts": ["bs = bs.cli:main",],
         "bs.builders": [
             "CC = bs.builders.cc",
             "CXX = bs.builders.cxx",
