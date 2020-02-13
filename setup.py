@@ -10,7 +10,9 @@ with open("README.rst") as readme_file:
 with open("HISTORY.rst") as history_file:
     history = history_file.read()
 
-requirements = []
+requirements = [
+    "docopt==0.6.2",
+]
 
 setup_requirements = [
     "pytest-runner",
@@ -36,7 +38,7 @@ setup(
         "Programming Language :: Python :: 3.8",
     ],
     entry_points={
-        "console_scripts": ["bs = bs.cli",],
+        "console_scripts": ["bs = bs.cli.main",],
         "bs.builders": [
             "CC = bs.builders.cc",
             "CXX = bs.builders.cxx",
