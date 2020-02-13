@@ -1,0 +1,6 @@
+---
+builds:
+  - CC:
+      target: hello_world
+      sources:
+        - main.c
